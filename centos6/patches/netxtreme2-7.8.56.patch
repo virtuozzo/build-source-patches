@@ -1,0 +1,72 @@
+diff -ur netxtreme2-7.8.56.orig/bnx2/src/Makefile netxtreme2-7.8.56/bnx2/src/Makefile
+--- netxtreme2-7.8.56.orig/bnx2/src/Makefile	2013-10-03 23:57:13.000000000 +0300
++++ netxtreme2-7.8.56/bnx2/src/Makefile	2014-04-03 13:22:03.926483316 +0300
+@@ -344,7 +344,7 @@
+ 	mkdir -p $(PREFIX)/$(BCMMODDIR);
+ 	install -m 444 $(BCM_DRV) $(PREFIX)/$(BCMMODDIR);
+ 	install -m 444 bnx2.4.gz $(PREFIX)/usr/share/man/man4;
+-	@if [ "$(PREFIX)" = "" ]; then /sbin/depmod -a ;\
++	@if [ "$(PREFIX)" = "" ]; then /sbin/depmod -a $(KVER);\
+ 	else echo " *** Run '/sbin/depmod -a' to update the module database.";\
+ 	fi
+ 
+diff -ur netxtreme2-7.8.56.orig/bnx2-2.78.33/src/Makefile netxtreme2-7.8.56/bnx2-2.78.33/src/Makefile
+--- netxtreme2-7.8.56.orig/bnx2-2.78.33/src/Makefile	2013-10-03 23:57:13.000000000 +0300
++++ netxtreme2-7.8.56/bnx2-2.78.33/src/Makefile	2014-04-03 13:22:03.926483316 +0300
+@@ -344,7 +344,7 @@
+ 	mkdir -p $(PREFIX)/$(BCMMODDIR);
+ 	install -m 444 $(BCM_DRV) $(PREFIX)/$(BCMMODDIR);
+ 	install -m 444 bnx2.4.gz $(PREFIX)/usr/share/man/man4;
+-	@if [ "$(PREFIX)" = "" ]; then /sbin/depmod -a ;\
++	@if [ "$(PREFIX)" = "" ]; then /sbin/depmod -a $(KVER);\
+ 	else echo " *** Run '/sbin/depmod -a' to update the module database.";\
+ 	fi
+ 
+diff -ur netxtreme2-7.8.56.orig/bnx2fc/driver/Makefile netxtreme2-7.8.56/bnx2fc/driver/Makefile
+--- netxtreme2-7.8.56.orig/bnx2fc/driver/Makefile	2013-10-03 23:57:14.000000000 +0300
++++ netxtreme2-7.8.56/bnx2fc/driver/Makefile	2014-04-03 13:22:25.155859486 +0300
+@@ -123,7 +123,7 @@
+ bnx2fc_install:
+ 	mkdir -p $(PREFIX)/lib/modules/$(KVER)/kernel/drivers/scsi;
+ 	install -m 444 $(BCM_DRV) $(PREFIX)/lib/modules/$(KVER)/updates;
+-	@if [ "$(PREFIX)" = "" ]; then /sbin/depmod -a ;\
++	@if [ "$(PREFIX)" = "" ]; then /sbin/depmod -a $(KVER);\
+ 	else echo " *** Run '/sbin/depmod -a' to update the module database.";\
+ 	fi
+ 
+diff -ur netxtreme2-7.8.56.orig/bnx2fc-2.4.0/driver/Makefile netxtreme2-7.8.56/bnx2fc-2.4.0/driver/Makefile
+--- netxtreme2-7.8.56.orig/bnx2fc-2.4.0/driver/Makefile	2013-10-03 23:57:14.000000000 +0300
++++ netxtreme2-7.8.56/bnx2fc-2.4.0/driver/Makefile	2014-04-03 13:22:25.155859486 +0300
+@@ -123,7 +123,7 @@
+ bnx2fc_install:
+ 	mkdir -p $(PREFIX)/lib/modules/$(KVER)/kernel/drivers/scsi;
+ 	install -m 444 $(BCM_DRV) $(PREFIX)/lib/modules/$(KVER)/updates;
+-	@if [ "$(PREFIX)" = "" ]; then /sbin/depmod -a ;\
++	@if [ "$(PREFIX)" = "" ]; then /sbin/depmod -a $(KVER);\
+ 	else echo " *** Run '/sbin/depmod -a' to update the module database.";\
+ 	fi
+ 
+diff -ur netxtreme2-7.8.56.orig/bnx2x/src/Makefile netxtreme2-7.8.56/bnx2x/src/Makefile
+--- netxtreme2-7.8.56.orig/bnx2x/src/Makefile	2013-10-03 23:57:14.000000000 +0300
++++ netxtreme2-7.8.56/bnx2x/src/Makefile	2014-04-03 13:29:51.434772200 +0300
+@@ -198,7 +198,7 @@
+ modules_install: $(obj-m)
+ 	$(MAKE) -C $(KERNEL_DIR) M=`pwd` INSTALL_MOD_PATH=$(PREFIX) INSTALL_MOD_DIR=$(DRV_DIR) modules_install
+ 	@if [ "$(PREFIX)" = "" ] ;\
+-		then /sbin/depmod -a ;\
++		then /sbin/depmod -a $(KVER);\
+ 		else echo " *** Run '/sbin/depmod -a' to update the module database." ;\
+ 	fi
+ 
+diff -ur netxtreme2-7.8.56.orig/bnx2x-1.78.58/src/Makefile netxtreme2-7.8.56/bnx2x-1.78.58/src/Makefile
+--- netxtreme2-7.8.56.orig/bnx2x-1.78.58/src/Makefile	2013-10-03 23:57:14.000000000 +0300
++++ netxtreme2-7.8.56/bnx2x-1.78.58/src/Makefile	2014-04-03 13:29:51.434772200 +0300
+@@ -198,7 +198,7 @@
+ modules_install: $(obj-m)
+ 	$(MAKE) -C $(KERNEL_DIR) M=`pwd` INSTALL_MOD_PATH=$(PREFIX) INSTALL_MOD_DIR=$(DRV_DIR) modules_install
+ 	@if [ "$(PREFIX)" = "" ] ;\
+-		then /sbin/depmod -a ;\
++		then /sbin/depmod -a $(KVER);\
+ 		else echo " *** Run '/sbin/depmod -a' to update the module database." ;\
+ 	fi
+ 

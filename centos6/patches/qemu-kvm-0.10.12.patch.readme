@@ -1,0 +1,5 @@
+1. The qemu-kvm-0.10.12.spec.patch was made against the following qemu sources obtained at:
+http://vault.centos.org/6.7/updates/Source/SPackages/qemu-kvm-0.12.1.2-2.479.el6_7.4.src.rpm
+
+2. To rebuild the custom packages, run:
+rpmbuild -ba rpmbuild/SPECS/qemu-kvm.spec --define 'dist .el6_7'

@@ -1,0 +1,42 @@
+From df33a01dc2806e6cd3443863603dbdc2cc6040d0 Mon Sep 17 00:00:00 2001
+From: Reinier Schoof <reinier@transip.nl>
+Date: Thu, 17 Jan 2013 12:24:04 +0100
+Subject: [PATCH] fixed xt_physdev warning when defining ip(6)tables rules
+
+When starting a VM, /var/log/messages was spammed with the following message:
+ xt_physdev: using --physdev-out in the OUTPUT, FORWARD and POSTROUTING chains for non-bridged traffic is not supported anymore.
+
+With each extra VM I start, the messages get amplified
+exponentially. This results in longer starting times every new VM,
+relative the the previously started VM. When I ran a test with
+starting 100 equal VM's, the first VM started in about 2 seconds, the
+100th VM took 48 seconds to start. I'm running a vanilla 3.7.1 kernel,
+but I have the same issue on VM hosts with kernel 3.2.28 or 3.2.0,
+running libvirt 0.9.12 and 0.9.8 respectively.
+
+Looking into the warning, it seemed that iptables need an extra argument,
+--physdev-is-bridged, in commands like:
+ iptables -A libvirt-out -m physdev --physdev-is-bridged --physdev-out vnet99 -g FP-vnet99
+
+With that, the warnings in /var/log/messages are gone and running the
+test again proved the 100th VM started in 3.8 seconds.
+---
+ src/nwfilter/nwfilter_ebiptables_driver.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/nwfilter/nwfilter_ebiptables_driver.c b/src/nwfilter/nwfilter_ebiptables_driver.c
+index 9bff8f1..121ce9a 100644
+--- a/src/nwfilter/nwfilter_ebiptables_driver.c
++++ b/src/nwfilter/nwfilter_ebiptables_driver.c
+@@ -166,7 +166,7 @@ static const char ebiptables_script_set_ifs[] =
+     snprintf(buf, sizeof(buf), "%c%c-%s", prefix[0], prefix[1], ifname)
+ 
+ #define PHYSDEV_IN  "--physdev-in"
+-#define PHYSDEV_OUT "--physdev-out"
++#define PHYSDEV_OUT "--physdev-is-bridged --physdev-out"
+ 
+ static const char *m_state_out_str   = "-m state --state NEW,ESTABLISHED";
+ static const char *m_state_in_str    = "-m state --state ESTABLISHED";
+-- 
+1.7.12.4
+

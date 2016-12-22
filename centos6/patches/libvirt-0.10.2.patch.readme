@@ -1,0 +1,7 @@
+1. The libvirt-0.10.2.spec.patch was made against the following libvirt sources obtained at:
+http://vault.centos.org/6.7/os/Source/SPackages/libvirt-0.10.2-54.el6.src.rpm
+
+2. Put the libvirt-fixed-xt_physdev-warning-when-defining-ip-6-tables-r.patch into the rpmbuild/SOURCES
+
+3. To rebuild the custom packages, run:
+rpmbuild -ba rpmbuild/SPECS/libvirt.spec

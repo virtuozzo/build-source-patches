@@ -1,0 +1,28 @@
+--- kernel.spec.orig	2012-09-26 12:13:05.000000000 +0100
++++ kernel.spec	2012-09-26 12:13:07.000000000 +0100
+@@ -15,7 +15,7 @@
+ # that the kernel isn't the stock distribution kernel, for example,
+ # by setting the define to ".local" or ".bz123456"
+ #
+-# % define buildid .local
++%define buildid .onapp
+ 
+ %define rhel 1
+ %if %{rhel}
+@@ -608,6 +608,8 @@
+ Source85: config-ia64-generic-rhel
+ Source86: config-x86_64-debug-rhel
+ 
++Patch666: kernel.e878d78b9a7403fabc89ecc93c56928b74d14f01.patch
++
+ # empty final patch file to facilitate testing of kernel patches
+ Patch999999: linux-kernel-test.patch
+ 
+@@ -919,6 +921,7 @@
+ # Dynamically generate kernel .config files from config-* files
+ make -f %{SOURCE20} VERSION=%{version} configs
+ 
++ApplyPatch kernel.e878d78b9a7403fabc89ecc93c56928b74d14f01.patch
+ ApplyOptionalPatch linux-kernel-test.patch
+ 
+ # Any further pre-build tree manipulations happen here.

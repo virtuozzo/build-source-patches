@@ -1,0 +1,29 @@
+--- libvirt.spec.orig	2015-04-28 16:21:23.000000000 +0300
++++ libvirt.spec	2016-06-03 15:13:08.333009772 +0300
+@@ -316,6 +316,8 @@
+ %define with_rhel5  0
+ %endif
+ 
++%define extra_release .onapp.1
++
+ Summary: Library providing a simple virtualization API
+ Name: libvirt
+ Version: 0.10.2
+@@ -1209,6 +1211,7 @@ Patch875: libvirt-RHEL-Avoid-memory-leak
+ Patch876: libvirt-qemu-cgroup-Fix-memory-leak-when-there-s-no-vCPU-pinning.patch
+ Patch877: libvirt-util-set-MAC-address-for-VF-via-netlink-message-to-PF-VF-when-possible.patch
+ Patch878: libvirt-util-set-macvtap-physdev-online-when-macvtap-is-set-online.patch
++Patch879: libvirt-fixed-xt_physdev-warning-when-defining-ip-6-tables-r.patch
+ 
+ 
+ # All runtime requirements for the libvirt package (runtime requrements
+@@ -2372,6 +2375,9 @@ rm -f $RPM_BUILD_ROOT%{_sysconfdir}/sysc
+ %endif
+ 
+ %changelog
++* Fri Jun 3 2016 Yuriy Kohut <ykohut@onapp.com> - 0.10.2-54.onapp.1
++- fixed xt_physdev warning when defining ip(6)tables rules 
++
+ * Tue Apr 28 2015 Jiri Denemark <jdenemar@redhat.com> - 0.10.2-54
+ - util: set MAC address for VF via netlink message to PF+VF# when possible (rhbz#1113474)
+ - util: set macvtap physdev online when macvtap is set online (rhbz#1113474)
