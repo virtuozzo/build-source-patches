@@ -1,0 +1,24 @@
+diff -ur linux-2.6.18-308.4.1.el5.x86_64/drivers/xen/pciback/pciback_ops.c linux-2.6.18-308.4.1.el5.x86_64-onapp/drivers/xen/pciback/pciback_ops.c
+--- linux-2.6.18-308.4.1.el5.x86_64/drivers/xen/pciback/pciback_ops.c	2012-06-22 16:31:52.000000000 +0100
++++ linux-2.6.18-308.4.1.el5.x86_64-onapp/drivers/xen/pciback/pciback_ops.c	2012-06-22 17:06:38.000000000 +0100
+@@ -10,6 +10,8 @@
+ 
+ int verbose_request = 0;
+ module_param(verbose_request, int, 0644);
++int no_pci_disable_device = 0;
++module_param(no_pci_disable_device, int, 0);
+ 
+ /* Ensure a device is "turned off" and ready to be exported.
+  * (Also see pciback_config_reset to ensure virtual configuration space is
+@@ -34,9 +36,11 @@
+ 		 */
+ 		msi_prune_pci_irq_vectors(dev);
+ #endif
++		if (!no_pci_disable_device) {
+ 		pci_disable_device(dev);
+ 
+ 		pci_write_config_word(dev, PCI_COMMAND, 0);
++		}
+ 
+ 		dev->is_enabled = 0;
+ 		dev->is_busmaster = 0;

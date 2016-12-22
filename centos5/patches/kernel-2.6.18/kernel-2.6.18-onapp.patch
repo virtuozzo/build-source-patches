@@ -1,0 +1,253 @@
+diff -urN linux-2.6.18-348.4.1.el5.x86_64/drivers/pci/Kconfig linux-2.6.18-348.4.1.el5.onapp.x86_64/drivers/pci/Kconfig
+--- linux-2.6.18-348.4.1.el5.x86_64/drivers/pci/Kconfig	2013-05-08 11:06:40.000000000 +0100
++++ linux-2.6.18-348.4.1.el5.onapp.x86_64/drivers/pci/Kconfig	2013-05-08 11:08:49.000000000 +0100
+@@ -45,3 +45,18 @@
+ 	  physical resources.
+ 
+ 	  If unsure, say N.
++
++config PCI_REASSIGN
++	bool "Enable reassign page-aligned memory resources to device"
++	depends on PCI
++	default y
++	help
++	  Say Y here if you want to reassign page-aligned memory resources to
++	  the device. And add boot parameters of linux as follows.
++
++	  reassigndev=00:1d.7,01:00.0
++	  
++	  "reassigndev=" specifies devices to reassign page-aligned memory
++	  resources. PCI-PCI bridge can be specified, if resource windows need
++	  to be expanded.
++
+diff -urN linux-2.6.18-348.4.1.el5.x86_64/drivers/pci/Makefile linux-2.6.18-348.4.1.el5.onapp.x86_64/drivers/pci/Makefile
+--- linux-2.6.18-348.4.1.el5.x86_64/drivers/pci/Makefile	2013-05-08 11:06:40.000000000 +0100
++++ linux-2.6.18-348.4.1.el5.onapp.x86_64/drivers/pci/Makefile	2013-05-08 11:08:49.000000000 +0100
+@@ -6,6 +6,7 @@
+ 			pci-driver.o search.o pci-sysfs.o rom.o \
+ 			setup-res.o vpd.o
+ obj-$(CONFIG_PROC_FS) += proc.o
++obj-$(CONFIG_PCI_REASSIGN) += reassigndev.o
+ 
+ # Build PCI Express stuff if needed
+ obj-$(CONFIG_PCIEPORTBUS) += pcie/
+diff -urN linux-2.6.18-348.4.1.el5.x86_64/drivers/pci/pci.h linux-2.6.18-348.4.1.el5.onapp.x86_64/drivers/pci/pci.h
+--- linux-2.6.18-348.4.1.el5.x86_64/drivers/pci/pci.h	2013-05-08 11:06:40.000000000 +0100
++++ linux-2.6.18-348.4.1.el5.onapp.x86_64/drivers/pci/pci.h	2013-05-08 11:08:49.000000000 +0100
+@@ -127,6 +127,13 @@
+ 	return bus->self && bus->self->ari_enabled;
+ }
+ 
++#ifdef CONFIG_PCI_REASSIGN
++extern int is_reassigndev(struct pci_dev *dev);
++#else
++#define is_reassigndev(dev) 0
++#endif
++extern void pci_disable_bridge_window(struct pci_dev *dev);
++
+ /* Single Root I/O Virtualization */
+ struct pci_sriov {
+ 	int pos;		/* capability position */
+diff -urN linux-2.6.18-348.4.1.el5.x86_64/drivers/pci/quirks.c linux-2.6.18-348.4.1.el5.onapp.x86_64/drivers/pci/quirks.c
+--- linux-2.6.18-348.4.1.el5.x86_64/drivers/pci/quirks.c	2013-05-08 11:06:40.000000000 +0100
++++ linux-2.6.18-348.4.1.el5.onapp.x86_64/drivers/pci/quirks.c	2013-05-08 11:08:49.000000000 +0100
+@@ -1895,6 +1895,54 @@
+ 			 quirk_brcm_5719_limit_mrrs);
+ 
+ EXPORT_SYMBOL(pcie_mch_quirk);
++
++/*
++ * This quirk function disables the device and releases resources
++ * which is specified by kernel's boot parameter 'reassigndev'.
++ * Later on, kernel will assign page-aligned memory resource back
++ * to that device.
++ */
++static void __devinit quirk_release_resources(struct pci_dev *dev)
++{
++	int i;
++	struct resource *r;
++
++	if (is_reassigndev(dev)) {
++		if (dev->hdr_type == PCI_HEADER_TYPE_NORMAL &&
++		    (dev->class >> 8) == PCI_CLASS_BRIDGE_HOST) {
++			/* PCI Host Bridge isn't a target device */
++			return;
++		}
++		printk(KERN_INFO 
++			"PCI: Disable device and release resources [%s].\n",
++			pci_name(dev));
++		pci_disable_device(dev);
++
++		for (i=0; i < PCI_NUM_RESOURCES; i++) {
++			r = &dev->resource[i];
++			if (!(r->flags & IORESOURCE_MEM))
++				continue;
++
++			r->end = r->end - r->start;
++			r->start = 0;
++
++			if (i < PCI_BRIDGE_RESOURCES) {
++				pci_update_resource(dev, r, i);
++			}
++		}
++		/* need to disable bridge's resource window,
++		 * to make kernel enable to reassign new resource
++		 * window later on.
++		 */
++		if (dev->hdr_type == PCI_HEADER_TYPE_BRIDGE &&
++		    (dev->class >> 8) == PCI_CLASS_BRIDGE_PCI) {
++			pci_disable_bridge_window(dev);
++		}
++		return;
++	}
++}
++DECLARE_PCI_FIXUP_HEADER(PCI_ANY_ID, PCI_ANY_ID, quirk_release_resources);
++
+ #ifdef CONFIG_HOTPLUG
+ EXPORT_SYMBOL(pci_fixup_device);
+ #endif
+diff -urN linux-2.6.18-348.4.1.el5.x86_64/drivers/pci/reassigndev.c linux-2.6.18-348.4.1.el5.onapp.x86_64/drivers/pci/reassigndev.c
+--- linux-2.6.18-348.4.1.el5.x86_64/drivers/pci/reassigndev.c	1970-01-01 01:00:00.000000000 +0100
++++ linux-2.6.18-348.4.1.el5.onapp.x86_64/drivers/pci/reassigndev.c	2013-05-08 11:08:49.000000000 +0100
+@@ -0,0 +1,80 @@
++/*
++ * Copyright (c) 2008, NEC Corporation.
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms and conditions of the GNU General Public License,
++ * version 2, as published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope it will be useful, but WITHOUT
++ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
++ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
++ * more details.
++ *
++ * You should have received a copy of the GNU General Public License along with
++ * this program; if not, write to the Free Software Foundation, Inc., 59 Temple
++ * Place - Suite 330, Boston, MA 02111-1307 USA.
++ */
++
++#include <linux/kernel.h>
++#include <linux/pci.h>
++#include <linux/string.h>
++#include "pci.h"
++
++
++#define	REASSIGNDEV_PARAM_MAX	(2048)
++#define	TOKEN_MAX	(12)	/* "SSSS:BB:DD.F" length is 12 */
++
++static char param_reassigndev[REASSIGNDEV_PARAM_MAX] = {0};
++
++static int __init reassigndev_setup(char *str)
++{
++	strncpy(param_reassigndev, str, REASSIGNDEV_PARAM_MAX);
++	param_reassigndev[REASSIGNDEV_PARAM_MAX - 1] = '\0';
++	return 1;
++}
++__setup("reassigndev=", reassigndev_setup);
++
++int is_reassigndev(struct pci_dev *dev)
++{
++	char dev_str[TOKEN_MAX+1];
++	int seg, bus, slot, func;
++	int len;
++	char *p, *next_str;
++
++	p = param_reassigndev;
++	for (; p; p = next_str + 1) {
++		next_str = strpbrk(p, ",");
++		if (next_str) {
++			len = next_str - p;
++		} else {
++			len = strlen(p);
++		}
++		if (len > 0 && len <= TOKEN_MAX) {
++			strncpy(dev_str, p, len);
++			*(dev_str + len) = '\0';
++
++			if (sscanf(dev_str, "%x:%x:%x.%x", 
++				&seg, &bus, &slot, &func) != 4) {
++				if (sscanf(dev_str, "%x:%x.%x", 
++					&bus, &slot, &func) == 3) {
++					seg = 0;
++				} else {
++					/* failed to scan strings */
++					seg = -1;
++					bus = -1;
++				}
++			}
++			if (seg == pci_domain_nr(dev->bus) &&
++			    bus == dev->bus->number &&
++			    slot == PCI_SLOT(dev->devfn) &&
++			    func == PCI_FUNC(dev->devfn)) {
++				/* It's a target device */
++				return 1;
++			}
++		}
++		if (!next_str)
++			break;
++	}
++
++	return 0;
++}
+diff -urN linux-2.6.18-348.4.1.el5.x86_64/drivers/pci/setup-bus.c linux-2.6.18-348.4.1.el5.onapp.x86_64/drivers/pci/setup-bus.c
+--- linux-2.6.18-348.4.1.el5.x86_64/drivers/pci/setup-bus.c	2013-05-08 11:06:40.000000000 +0100
++++ linux-2.6.18-348.4.1.el5.onapp.x86_64/drivers/pci/setup-bus.c	2013-05-08 11:23:03.000000000 +0100
+@@ -385,6 +385,7 @@
+ 
+ 	list_for_each_entry(dev, &bus->devices, bus_list) {
+ 		int i;
++		int reassign = is_reassigndev(dev);
+ 
+ 		for (i = 0; i < PCI_NUM_RESOURCES; i++) {
+ 			struct resource *r = &dev->resource[i];
+@@ -393,6 +394,8 @@
+ 			if (r->parent || (r->flags & mask) != type)
+ 				continue;
+ 			r_size = r->end - r->start + 1;
++			if (reassign)
++				r_size = ALIGN(r_size, PAGE_SIZE);
+ 			/* For bridges size != alignment */
+ 			align = pci_resource_alignment(dev, r);
+ 			order = __ffs(align) - 20;
+diff -urN linux-2.6.18-348.4.1.el5.x86_64/drivers/pci/setup-res.c linux-2.6.18-348.4.1.el5.onapp.x86_64/drivers/pci/setup-res.c
+--- linux-2.6.18-348.4.1.el5.x86_64/drivers/pci/setup-res.c	2013-05-08 11:06:40.000000000 +0100
++++ linux-2.6.18-348.4.1.el5.onapp.x86_64/drivers/pci/setup-res.c	2013-05-08 11:25:38.000000000 +0100
+@@ -102,12 +102,26 @@
+ }
+ EXPORT_SYMBOL_GPL(pci_claim_resource);
+ 
++void pci_disable_bridge_window(struct pci_dev *dev)
++{
++	dev_dbg(&dev->dev, "Disable bridge window\n");
++
++ 	/* MMIO Base/Limit */
++ 	pci_write_config_dword(dev, PCI_MEMORY_BASE, 0x0000fff0);
++ 
++ 	/* Prefetchable MMIO Base/Limit */
++ 	pci_write_config_dword(dev, PCI_PREF_LIMIT_UPPER32, 0);
++ 	pci_write_config_dword(dev, PCI_PREF_MEMORY_BASE, 0x0000fff0);
++ 	pci_write_config_dword(dev, PCI_PREF_BASE_UPPER32, 0xffffffff);
++}
++
+ int pci_assign_resource(struct pci_dev *dev, int resno)
+ {
+ 	struct pci_bus *bus = dev->bus;
+ 	struct resource *res;
+ 	resource_size_t size, min, align;
+ 	int ret;
++	int reassigndev = is_reassigndev(dev);
+ 	char *type;
+ 
+ 	if (resno <= PCI_NUM_RESOURCES) {
+@@ -130,6 +144,10 @@
+ 	min = (res->flags & IORESOURCE_IO) ? PCIBIOS_MIN_IO : PCIBIOS_MIN_MEM;
+ 
+ 	align = pci_resource_alignment(dev, res);
++	if ((reassigndev) &&
++	    (res->flags & IORESOURCE_MEM)) {
++		align = ALIGN(align, PAGE_SIZE);
++	}
+ 	if (!align) {
+ 		dev_info(&dev->dev, "BAR %d: can't assign %pR "
+ 			 "(bogus alignment)\n", resno, res);

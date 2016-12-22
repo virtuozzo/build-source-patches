@@ -1,0 +1,15 @@
+--- fs/xfs/xfs_alloc.c	2014-11-05 20:09:36.000000000 +0200
++++ fs/xfs/xfs_alloc.c.orig	2014-11-07 12:42:19.000000000 +0200
+@@ -1076,12 +1076,6 @@
+ 	 * If we couldn't get anything, give up.
+ 	 */
+ 	if (bno_cur_lt == NULL && bno_cur_gt == NULL) {
+-		/* xfs mem leak patches mentioned in links below:
+-			https://bugs.launchpad.net/ubuntu/+source/linux/+bug/1327360
+-			http://www.redhat.com/archives/dm-devel/2012-July/msg00015.html
+-		*/
+-		xfs_btree_del_cursor(cnt_cur, XFS_BTREE_NOERROR); /* Michail: added 05 Nov 2014 */
+-
+ 		if (!forced++) {
+ 			trace_xfs_alloc_near_busy(args);
+ 			xfs_log_force(args->mp, XFS_LOG_SYNC);

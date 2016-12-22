@@ -1,0 +1,49 @@
+--- kernel.spec.orig	2012-09-03 12:14:33.000000000 +0100
++++ kernel.spec	2012-09-03 15:11:59.000000000 +0100
+@@ -71,7 +71,7 @@
+ # that the kernel isn't the stock distribution kernel, for example,
+ # by setting the define to ".local" or ".bz123456"
+ #
+-#% define buildid
++%define buildid .onapp
+ #
+ %define sublevel 18
+ %define stablerev 4
+@@ -198,7 +198,7 @@
+ %ifarch x86_64
+ %define all_arch_configs kernel-%{rpmversion}-x86_64*.config
+ %define image_install_path boot
+-%define signmodules 1
++%define signmodules 0
+ %define xen_flags verbose=y crash_debug=y max_phys_cpus=256 XEN_VENDORVERSION=-%{release}
+ %endif
+ 
+@@ -422,8 +422,10 @@
+ Source130: check-kabi
+ 
+ Patch1: kernel-2.6.18-redhat.patch
++Patch4: kernel-2.6.18-onapp.patch
+ Patch2: xen-config-2.6.18-redhat.patch
+ Patch3: xen-2.6.18-redhat.patch
++Patch5: xen-2.6.18-onapp.patch
+ 
+ # empty final patch file to facilitate testing of kernel patches
+ Patch99999: linux-kernel-test.patch
+@@ -680,6 +682,7 @@
+ cd linux-%{KVERREL}.%{_target_cpu}
+ 
+ %patch1 -p1 -E
++%patch4 -p2 -E
+ 
+ # conditionally applied test patch for debugging convenience
+ %if %([ -s %{PATCH99999} ] && echo 1 || echo 0)
+@@ -772,6 +775,9 @@
+ cd xen
+ %patch3 -p1 -E
+ cd ..
++cd linux-%{KVERREL}.%{_target_cpu}
++%patch5 -p1 -E
++cd ..
+ %endif
+ %endif
+ 

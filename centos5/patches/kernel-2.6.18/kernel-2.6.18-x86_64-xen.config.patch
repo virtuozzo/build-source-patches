@@ -1,0 +1,8 @@
+--- kernel-2.6.18-x86_64-xen.config.orig	2013-03-22 09:34:43.000000000 +0000
++++ kernel-2.6.18-x86_64-xen.config	2013-05-08 12:36:31.000000000 +0100
+@@ -3374,3 +3374,5 @@
+ CONFIG_X86_64=y
+ # CONFIG_X86_XEN is not set
+ # CALGARY_IOMMU_ENABLED_BY_DEFAULT is not set
++
++CONFIG_PCI_REASSIGN=y
